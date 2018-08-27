@@ -1,0 +1,55 @@
+TITLE:
+2 classes
+DATA:
+FILE = "data_dating_a8dba39ea3a333b2dd61d574f8cbec35.dat";
+ 
+VARIABLE:
+NAMES = u11 u12 u13 u14 u15 u21 u22 u23 u24 u25; 
+ MISSING=.;
+ CATEGORICAL = u11-u15 u21-u25;CLASSES = c1(2) c2(2);
+
+ANALYSIS:
+TYPE = mixture;
+PROCESSORS IS 2;
+LRTSTARTS (0 0 40 20);
+PARAMETERIZATION = PROBABILITY;
+MODEL:
+%OVERALL%
+c2 ON c1;
+
+MODEL c1:
+%c1#1%
+[u11$1] (a1);
+[u12$1] (b1);
+[u13$1] (c1);
+[u14$1] (d1);
+[u15$1] (e1);
+
+%c1#2%
+[u11$1] (a2);
+[u12$1] (b2);
+[u13$1] (c2);
+[u14$1] (d2);
+[u15$1] (e2);
+
+MODEL c2:
+%c2#1%
+[u21$1] (a1);
+[u22$1] (b1);
+[u23$1] (c1);
+[u24$1] (d1);
+[u25$1] (e1);
+
+%c2#2%
+[u21$1] (a2);
+[u22$1] (b2);
+[u23$1] (c2);
+[u24$1] (d2);
+[u25$1] (e2);
+
+
+OUTPUT:
+standardized
+SAVEDATA:
+FILE IS dating_2.dat;
+SAVE = cprobabilities;
