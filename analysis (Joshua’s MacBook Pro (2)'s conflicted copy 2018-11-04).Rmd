@@ -1,0 +1,200 @@
+---
+title: "LCA data modeling Seth-Josh"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = FALSE, message = FALSE, warning = FALSE, echo = TRUE)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60),  # For code
+                      width = 60)  # For output
+
+options(cli.width = 60)  # For tidyverse loading messages
+
+set.seed(20180925)
+```
+
+# 1. Loading, setting up
+
+```{r, load}
+library(tidyverse)
+library(poLCA)
+
+f <- "obs-segment_units1-7_2013-2014.csv"
+
+d <- read_csv(f)
+```
+
+# 2. Preparing data with a few teacher and student variables
+
+None of the unit-specific variables included.
+
+```{r, prep}
+add_one <- function(x) {
+    x + 1
+}
+
+ds <- d %>% 
+    dplyr::select(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain, fGroups) %>% 
+    map_df(replace_na, 0) %>% 
+    map_df(add_one)
+```
+
+# 2. testing tidyLPA
+
+```{r}
+library(tidyLPA)
+dss <- d %>% 
+    dplyr::select(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain, fGroups) %>% 
+    map_df(replace_na, 0)
+estimate_profiles_mplus(dss, sInvented, sProcedural, sConceptual, n_profiles=2, categorical_indicators=TRUE, remove_tmp_files=FALSE, variances = "equal", covariances = "equal")
+```
+
+# 3. Choosing the number of classes/profiles
+
+Using latent class analysis through the **poLCA** R package.
+
+```{r, mapping-fit-stats, results = 'hide', cache = TRUE, eval = FALSE}
+f <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain) ~ 1
+
+f <- cbind(sInvented, sProcedural, sConceptual, tPressExplain) ~ 1
+
+od <- map(1:9, poLCA, formula = f, data = ds, maxiter = 5000, verbose = FALSE, graphs = FALSE) %>% 
+    map_df(broom::glance)
+
+saveRDS(od, "2013-2014-dat-compare.rds")
+```
+
+```{r}
+od <- read_rds("2013-2014-dat-compare.rds")
+```
+
+```{r, plot}
+od %>% 
+    mutate(n_classes = 1:9) %>% 
+    gather(key, val, BIC, AIC) %>% 
+    ggplot(aes(x = n_classes, y = val, color = key, group = key)) +
+    geom_point() +
+    geom_line() +
+    scale_x_continuous(breaks = 1:9, labels = 1:9) +
+    theme_bw() +
+    labs(caption = "Lower values of the AIC & BIC suggest preferred model(s); generally, BIC is more conservative than AIC")
+```
+
+Based on this fit statistic--the Bayesian Information Criteria, which is just a transformation of the log-likelihood, and is usually recommended along with the AIC as one criterion for model selection--it looks like 3 and especially 4 or 5 class solutions seem reasonable.
+
+# 4. Examining 3, 4, and 5 class solutions
+
+```{r, spec-sols}
+f <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain) ~ 1
+
+m3 <- poLCA(f, ds, nclass = 3, maxiter = 5000, graphs = TRUE)
+m4 <- poLCA(f, ds, nclass = 4, maxiter = 5000, graphs = TRUE)
+m5 <- poLCA(f, ds, nclass = 5, maxiter = 5000, graphs = TRUE)
+```
+
+# 5. Examining the effects of a covariate (fGroups)
+
+```{r, cov}
+fcov <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain) ~ fGroups
+
+m4cov <- poLCA(fcov, ds, nclass = 4, maxiter = 5000, graphs = TRUE)
+```
+
+- What covariates do we want to add?
+
+# 6. Plot of segments over time for the four class solution
+
+```{r, plot-func, include = FALSE}
+
+f <- function(teacher_ID, condition, d) {
+    
+    ds <- d %>%
+        dplyr::select(seg_num = SegNum, unit = `ClassObservation::Unit`, teacher = `Teacher::TeacherID`, m4_class_name, condition = `Teacher::Condition`) %>% 
+        mutate(tmp_val = 1) %>%
+        mutate(unit = str_c("Unit ", unit)) %>%
+        filter(teacher == teacher_ID)
+    
+    n_units <- length(unique(ds$unit))
+    
+    p <- ggplot(ds, aes(x = seg_num, y = tmp_val, color = as.factor(m4_class_name))) +
+        geom_point() +
+        theme_bw() +
+        facet_wrap(~ unit, ncol = 5) +
+        ggtitle(str_c("Four Class Solution for Teacher (ID): ", teacher_ID, " (", condition, ")")) +
+        scale_y_continuous("", labels = NULL) +
+        theme(axis.ticks.y = element_blank()) +
+        xlab("Segment") +
+        theme(legend.position= "top") +
+        scale_color_discrete("") +
+        labs(caption = "From Latent Class Analysis (LCA) using the poLCA R package")
+    
+    p 
+    
+    ggsave(str_c("plots-by-teacher/", teacher_ID, ".png"), plot = p, width = 10, height = 5)
+    
+    message(str_c("Sucessfully prepared plot for teacher (ID) ", teacher_ID))
+    
+}
+
+```
+
+```{r, results = 'hide', four-class}
+d$m4_class <- m4$predclass
+
+t <- d %>% 
+    dplyr::select(seg_num = SegNum, unit = `ClassObservation::Unit`, teacher = `Teacher::TeacherID`) %>% 
+    arrange(teacher, unit, seg_num) %>% 
+    group_by(unit) %>% 
+    summarize(max_seg_num = max(seg_num),
+              max_unit = max(unit)) 
+
+the_seqqer <- function(x) {
+    seq(1, t$max_seg_num[x])
+}
+
+l <- list()
+for (i in seq(t$max_seg_num)) {
+    l[[i]] <- seq(1, t$max_seg_num[i])    
+}
+
+t$seq_l <- l
+
+dtm <- dplyr::select(d, `Teacher::TeacherID`, `Teacher::Condition`) %>% distinct() %>% arrange(`Teacher::TeacherID`)
+
+d$m4_class <- as.factor(d$m4_class)
+
+levels = c("Discussing Ideas", "Inventing & Discussing", "Inventing & Connecting", "Low Activity")
+
+d$m4_class_name <- forcats::fct_recode(d$m4_class, 
+                                       `Discussing Ideas` = "1",
+                                       `Inventing & Connecting` = "3",
+                                       `Inventing & Discussing` = "2",
+                                       `Low Activity` = "4")
+
+```
+
+```{r}
+teacher_ID = dtm$`Teacher::TeacherID`
+condition = dtm$`Teacher::Condition`
+map2(teacher_ID, condition, f, d)
+```
+
+# 7. Adding extra data
+
+```{r}
+post_probs <- m4$posterior %>% as.data.frame() %>% setNames(paste0("C", 1:4, "_prob"))
+ds <- bind_cols(d, post_probs)
+ds <- rename(ds, class = m4_class)
+write_csv(ds, "data-with-class-probs.csv")
+```
+
+# 8. Other ideas
+
+- Examine unit-specific indicators by class?
+- Examine control vs. intervention mean proportions?
+
+# 9. Examining homophily and separation
+
+```{r}
+
+```

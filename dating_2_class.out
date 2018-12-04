@@ -1,6 +1,6 @@
 Mplus VERSION 8.1 (Mac)
 MUTHEN & MUTHEN
-08/19/2018   8:05 AM
+10/19/2018   8:28 PM
 
 INPUT INSTRUCTIONS
 
@@ -55,7 +55,7 @@ INPUT INSTRUCTIONS
 
 
   OUTPUT:
-  standardized
+  TECH11 TECH14;
   SAVEDATA:
   FILE IS dating_2.dat;
   SAVE = cprobabilities;
@@ -63,10 +63,12 @@ INPUT INSTRUCTIONS
 
 
 *** WARNING in OUTPUT command
-  STANDARDIZED (STD, STDY, STDYX) options for TYPE=MIXTURE with categorical, count,
-  censored or nominal outcomes are available only with ALGORITHM=INTEGRATION.
-  Request for STANDARDIZED (STD, STDY, STDYX) is ignored.
-   1 WARNING(S) FOUND IN THE INPUT INSTRUCTIONS
+  TECH11 option is not available for TYPE=MIXTURE with more than one
+  categorical latent variable.  Request for TECH11 is ignored.
+*** WARNING in OUTPUT command
+  TECH14 option is not available for TYPE=MIXTURE with more than one
+  categorical latent variable.  Request for TECH14 is ignored.
+   2 WARNING(S) FOUND IN THE INPUT INSTRUCTIONS
 
 
 
@@ -749,8 +751,8 @@ SAVEDATA INFORMATION
   Save file record length    10000
 
 
-     Beginning Time:  08:05:17
-        Ending Time:  08:05:19
+     Beginning Time:  20:28:24
+        Ending Time:  20:28:26
        Elapsed Time:  00:00:02
 
 

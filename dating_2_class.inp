@@ -49,7 +49,7 @@ MODEL c2:
 
 
 OUTPUT:
-standardized
+TECH11 TECH14;
 SAVEDATA:
 FILE IS dating_2.dat;
 SAVE = cprobabilities;

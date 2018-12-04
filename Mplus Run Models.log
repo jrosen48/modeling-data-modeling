@@ -1,10 +1,10 @@
-------Begin Mplus Model Run: 19Aug2018 08:05:17------
+------Begin Mplus Model Run: 19Oct2018 20:44:25------
 Target directory: .
 Run options:
 	Recursive (run models in subdirectories): FALSE
 	Show output on console: FALSE
 	Replace existing outfile: always
 ------
-Currently running model: dating_2_class.inp
+Currently running model: i.inp
 
-------End Mplus Model Run: 19Aug2018 08:05:19------
+------End Mplus Model Run: 19Oct2018 20:44:26------

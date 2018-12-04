@@ -1,0 +1,76 @@
+---
+title: "LCA data modeling Seth-Josh"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = FALSE, message = FALSE, warning = FALSE, echo = TRUE)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60),  # For code
+                      width = 60)  # For output
+
+options(cli.width = 60)  # For tidyverse loading messages
+
+set.seed(20180925)
+```
+
+# 1. Loading, setting up
+
+```{r, load}
+library(tidyverse)
+library(poLCA)
+
+f <- "obs-segment_units1-7_2013-2014.csv"
+
+d <- read_csv(f)
+```
+
+# 2. Preparing data with a few teacher and student variables
+
+None of the unit-specific variables included.
+
+```{r, prep}
+add_one <- function(x) {
+    x + 1
+}
+
+ds <- d %>% 
+    dplyr::select(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain, fGroups) %>% 
+    map_df(replace_na, 0) %>% 
+    map_df(add_one)
+```
+
+# 4A. Examining four-class solution with one random seed (1001)
+
+```{r, spec-sols-1}
+f <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain) ~ 1
+
+set.seed(1001)
+poLCA(f, ds, nclass = 4, maxiter = 5000, graphs = TRUE, verbose = FALSE)
+```
+
+# 4B. Examining four-class solution with one random seed (1002)
+
+```{r, spec-sols-2}
+f <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain) ~ 1
+
+set.seed(1002)
+poLCA(f, ds, nclass = 4, maxiter = 5000, graphs = TRUE, verbose = FALSE)
+```
+
+# 4C. Examining four-class solution with one random seed (1003)
+
+```{r, spec-sols-3}
+f <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain) ~ 1
+
+set.seed(1003)
+poLCA(f, ds, nclass = 4, maxiter = 5000, graphs = TRUE, verbose=FALSE)
+```
+
+# 5. Examining four-class solution with same random seed as for 4C (1003)
+
+```{r, spec-sols-rep}
+f <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain) ~ 1
+
+set.seed(1003)
+poLCA(f, ds, nclass = 4, maxiter = 5000, graphs = TRUE, verbose=FALSE)
+```

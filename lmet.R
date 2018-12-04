@@ -21,6 +21,8 @@ ds <- d %>%
 data("RLMSdat", package = "LMest")
 
 RLMSdat %>% str()
+
+RLMSdat[1, 3] <- NA
 out <- aggr_data(RLMSdat)
 yv <- out$freq
 S <- 1 - out$data_dis

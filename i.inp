@@ -1,0 +1,31 @@
+TITLE: Equal variances and equal covariances
+DATA: File is d.dat;
+VARIABLE:
+Names are id sInvented sProcedural sConceptual;
+Classes = c(2);
+IDVARIABLE = id;
+CATEGORICAL = sInvented sProcedural sConceptual;
+Missing are all (-999);
+MODEL:
+%overall%
+%c#1%
+sInvented WITH sProcedural (4);
+sInvented WITH sConceptual (5);
+sProcedural WITH sConceptual (6);
+%c#2%
+sInvented WITH sProcedural (4);
+sInvented WITH sConceptual (5);
+sProcedural WITH sConceptual (6);
+ANALYSIS:
+Type is mixture;
+PARAMETERIZATION = RESCOVARIANCES;
+starts = 100 10;
+miterations = 500;
+stiterations = 20;
+convergence = 1e-06;
+processors = 1;
+stscale = 3;
+OUTPUT: tech1 tech4 tech7 TECH11 tech14 tech12 tech13 sampstat svalues patterns residual
+stdyx;
+SAVEDATA: File is d-mod.dat;
+SAVE = CPROBABILITIES;
