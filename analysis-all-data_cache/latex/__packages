@@ -11,4 +11,5 @@ forcats
 scatterplot3d
 MASS
 poLCA
+readxl
 bindrcpp

@@ -1,0 +1,302 @@
+---
+title: "2019-01-29- LCA data modeling Seth-Josh"
+output: pdf_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE, cache = FALSE, message = FALSE, warning = FALSE, echo = TRUE)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60),  # For code
+                      width = 60)  # For output
+
+options(cli.width = 60)  # For tidyverse loading messages
+set.seed(20180925)
+knitr::clean_cache()
+```
+
+# 1. Loading, setting up
+
+```{r, load}
+library(tidyverse)
+library(poLCA)
+library(readxl)
+```
+
+# Getting data from Google Sheets
+
+```{r, eval = TRUE}
+library(googlesheets)
+library(readr)
+
+g <- gs_title("Observations_segment_Units_1-7_2013-14-with-duplicates-identified")
+d <- gs_read(g, col_types = 
+                 readr::cols(
+                     `ClassObservation::Observer` = col_character(),
+                     `ClassObservation::ObsNickname` = col_double(),
+                     `Teacher::TeacherID` = col_double(),
+                     `Teacher::First Name` = col_character(),
+                     `Teacher::Last Name` = col_character(),
+                     `Teacher::Condition` = col_character(),
+                     `ClassObservation::Unit` = col_double(),
+                     `ClassObservation::Date` = col_datetime(format = ""),
+                     Notes = col_character(),
+                     ObsNN = col_double(),
+                     SegNum = col_double(),
+                     `Segment::StartStamp` = col_datetime(format = ""),
+                     `Segment::EndStamp` = col_datetime(format = ""),
+                     fWhole = col_double(),
+                     fGroups = col_double(),
+                     fSeat = col_double(),
+                     sInvented = col_double(),
+                     sConceptual = col_double(),
+                     sProcedural = col_double(),
+                     sEngagement = col_character(),
+                     tInitSelect = col_double(),
+                     tCompare = col_double(),
+                     tDiscussQ = col_double(),
+                     tPressExplain = col_double(),
+                     tConnectOthers = col_double(),
+                     tConnectBigIdeas = col_double(),
+                     tConventional = col_double(),
+                     tProcedural = col_double(),
+                     iPrecision = col_double(),
+                     iCenter = col_double(),
+                     iDIsplay = col_double(),
+                     iOther = col_double(),
+                     iOrder = col_double(),
+                     iScale = col_double(),
+                     iGrouping = col_double(),
+                     iShape = col_double(),
+                     iShow = col_double(),
+                     iHide = col_double(),
+                     iMode = col_double(),
+                     iMedian = col_double(),
+                     iMean = col_double(),
+                     iRange = col_double(),
+                     iCenterClump = col_double(),
+                     iDeviation = col_double(),
+                     iReplicability = col_double(),
+                     iGeneralizability = col_double(),
+                     iLinkVisDist = col_double(),
+                     iLinkImagDist = col_double(),
+                     ITheoreticalProb = col_double(),
+                     IEmpiricalProb = col_double(),
+                     IOdds = col_logical(),
+                     ISampleSize = col_double(),
+                     ISamplingDistrib = col_double(),
+                     ICenterStats = col_double(),
+                     IVariabilityStats = col_double(),
+                     `Segment::iIntelligibility` = col_double(),
+                     `Segment::iModelFit` = col_double(),
+                     `Segment::iDistribution` = col_double(),
+                     `Segment::iRandomComponents` = col_double(),
+                     `Segment::iNonRandomComponents` = col_double(),
+                     `Segment::iMedianDistr` = col_double(),
+                     `Segment::iIQRDistr` = col_logical(),
+                     `Segment::iNewMedian` = col_double(),
+                     `Segment::iNewIQR` = col_logical(),
+                     `Segment::iRegions` = col_double(),
+                     `Segment::iQuantRegions` = col_double(),
+                     number_of_segments = col_double(),
+                     `Duplicate Condition` = col_character()
+                 ))
+
+d <- dplyr::rename(d, condition = `Teacher::Condition`)
+
+d <- d %>% 
+    mutate(condition = ifelse(str_detect(condition, "2"), 0,
+                              ifelse(str_detect(condition, "1"), 1, NA)))
+
+library(readxl)
+u <- read_xlsx("Observations_summary_Units_1-7_2012-13-mod.xlsx")
+
+g1 <- gs_title("Observations_segment_Units_1-7_2012-13-with-duplicates-identified")
+d1 <- gs_read(g1)
+d1 <- rename(d1, Teacher_ID = handl)
+#d1 <- unite(d1, Teacher, `Teacher::First Name`, `Teacher::Last Name`, sep = " ")
+d1 <- d1 %>% left_join(u, by = "Teacher_ID")
+d1 <- rename(d1, condition = Group)
+```
+
+
+```{r}
+add_one <- function(x) {
+    x + 1
+}
+
+ds <- d %>% 
+    dplyr::select(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain, condition, fGroups, fSeat, fWhole, `Duplicate Condition`, seg_num = SegNum, unit = `ClassObservation::Unit`, teacher = `Teacher::TeacherID`) %>% 
+    map_df(replace_na, 0) %>%
+    modify_at(c(1:9), add_one) %>% 
+    mutate(groups = case_when(
+        fGroups == 1 ~ "small_groups",
+        fSeat == 1 ~ "seat",
+        fWhole == 1 ~ "whole"
+    )) %>% 
+    dplyr::select(-fGroups, -fSeat, -fWhole)
+
+ds1 <- d1 %>% 
+    dplyr::select(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain, condition,  fGroups, fSeat, fWhole, `Duplicate Condition`, seg_num = SegNum, unit = `ClassObservation::Unit`, teacher = Teacher_ID) %>% 
+    map_df(replace_na, 0) %>% 
+    modify_at(c(1:9), add_one) %>% 
+    mutate(groups = case_when(
+        fGroups == 1 ~ "small_groups",
+        fSeat == 1 ~ "seat",
+        fWhole == 1 ~ "whole"
+    )) %>% 
+    dplyr::select(-fGroups, -fSeat, -fWhole)
+
+dd <- bind_rows(ds, ds1)
+
+dds <- filter(dd, `Duplicate Condition` != "D" & `Duplicate Condition` != "d")
+```
+
+# 3. Choosing the number of classes/profiles
+
+Using latent class analysis through the **poLCA** R package.
+
+```{r, mapping-fit-stats, results = 'hide', eval = TRUE}
+set.seed(20180925)
+
+f <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain) ~ 1
+#2341
+od <- map(1:9, poLCA, formula = f, data = dds, maxiter = 5000, verbose = FALSE, graphs = FALSE) %>% 
+    map_df(broom::glance)
+```
+
+```{r, plot, eval = TRUE}
+od %>% 
+    mutate(n_classes = 1:9) %>% 
+    gather(key, val, BIC, AIC) %>% 
+    ggplot(aes(x = n_classes, y = val, color = key, group = key)) +
+    geom_point() +
+    geom_line() +
+    scale_x_continuous(breaks = 1:9, labels = 1:9) +
+    theme_bw() +
+    labs(caption = "Lower values of the AIC & BIC suggest preferred model(s); generally, BIC is more conservative than AIC") +
+    xlab("Number of Classes") +
+    ylab("Value") +
+    scale_color_discrete("")
+```
+
+Based on these fit statistics, a three or four class solution seems to exhibit the best fit, though a three-class solution may also be suitable; for comparison, a two-class solution is also explored.
+
+# 4. Examining 2, 3, 4, and 5 class solutions
+
+```{r, spec-sols, cache = FALSE}
+set.seed(20180925)
+
+f <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain) ~ 1
+
+#m2 <- poLCA(f, dds, nclass = 2, maxiter = 10000, graphs = TRUE)
+#m3 <- poLCA(f, dds, nclass = 3, maxiter = 10000, graphs = TRUE)
+m4 <- poLCA(f, dds, nclass = 4, maxiter = 10000, graphs = TRUE)
+#m5 <- poLCA(f, dds, nclass = 5, maxiter = 10000, graphs = TRUE)
+```
+
+```{r, eval = FALSE}
+data.frame(dds, class = m4$predclass) %>% 
+    dplyr::select(class, condition) %>% 
+    count(class, condition)
+```
+
+# 5. Examining predictors of the 4-class solution - does not work well for 3 class solution
+
+# Moving forward with four-class solution
+
+```{r}
+post_probs <- m4$posterior %>% as.data.frame() %>% setNames(paste0("C", 1:4, "_prob"))
+df <- bind_cols(dds, post_probs)
+df$class <- m4$predclass
+df <- df %>% dplyr::select(-`Duplicate Condition`) %>% mutate_if(is.numeric, round, 3)   
+write_csv(df, "2019-02-10-data-with-class-probs.csv")
+```
+
+# Plots
+
+
+```{r, plot-func, include = FALSE}
+
+f <- function(teacher_ID, condition, d) {
+    
+    ds <- d %>%
+        mutate(tmp_val = 1) %>%
+        mutate(unit = str_c("Unit ", unit)) %>%
+        filter(teacher == teacher_ID)
+    
+    n_units <- length(unique(ds$unit))
+    
+    p <- ggplot(ds, aes(x = seg_num, y = tmp_val, color = class)) +
+        geom_point() +
+        theme_bw() +
+        facet_wrap(~ unit, ncol = 5) +
+        ggtitle(str_c("Four Class Solution for Teacher (ID): ", teacher_ID, " (", condition, ")")) +
+        scale_y_continuous("", labels = NULL) +
+        theme(axis.ticks.y = element_blank()) +
+        xlab("Segment") +
+        theme(legend.position= "top") +
+        scale_color_discrete("") +
+        labs(caption = "From Latent Class Analysis (LCA) using the poLCA R package")
+    
+    p 
+    
+    ggsave(str_c("plots-by-teacher/", teacher_ID, ".png"), plot = p, width = 10, height = 5)
+    
+    message(str_c("Sucessfully prepared plot for teacher (ID) ", teacher_ID))
+}
+```
+
+```{r}
+t <- df %>% 
+    arrange(teacher, unit, seg_num) %>% 
+    group_by(unit) %>% 
+    summarize(max_seg_num = max(seg_num),
+              max_unit = max(unit))
+
+the_seqqer <- function(x) {
+    seq(1, t$max_seg_num[x])
+}
+
+l <- list()
+for (i in seq(t$max_seg_num)) {
+    l[[i]] <- seq(1, t$max_seg_num[i])    
+}
+
+t$seq_l <- l
+
+dtm <- dplyr::select(df, teacher, condition) %>% distinct() %>% arrange(teacher)
+
+df$class <- as.factor(df$class)
+
+df$class<- forcats::fct_recode(df$class, 
+                               `Low Activity` = "1",
+                               `Inventing & Connecting` = "2",
+                               `Inventing & Discussing` = "3",
+                               `Discussing Ideas` = "4")
+
+teacher_ID = dtm$teacher
+condition = dtm$condition
+map2(teacher_ID, condition, f, df)
+```
+
+# Analysis
+
+```{r}
+dm1 <- df %>% count(class, condition) %>% 
+    spread(condition, n) %>% 
+    mutate(`0` = replace_na(`0`, 0))
+names_dm1 <- dm1$class
+mat1 <- as.matrix(dm1[, -1])
+cs1 <- chisq.test(mat1)
+write_csv(dm1, "tab1.csv")
+write_csv(as.data.frame(cs1$stdres), "mat1.csv")
+#clipr::write_clip(cs1$stdres)
+
+dm2 <- df %>% count(class, groups) %>% 
+    spread(groups, n)
+names_dm2 <- dm2$class
+mat2 <- as.matrix(dm2[, -c(1, 5)])
+cs2 <- chisq.test(mat2)
+write_csv(dm2, "tab2.csv")
+write_csv(as.data.frame(cs2$stdres), "mat2.csv")
+# clipr::write_clip(cs2$stdres)
+```

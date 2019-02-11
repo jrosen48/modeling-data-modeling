@@ -159,9 +159,6 @@ d$m4_class_name <- forcats::fct_recode(d$m4_class,
                                        `Inventing & Discussing` = "3",
                                        `Low Activity` = "4")
 
-```
-
-```{r}
 teacher_ID = dtm$`Teacher::TeacherID`
 condition = dtm$`Teacher::Condition`
 map2(teacher_ID, condition, f, d)

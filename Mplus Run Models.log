@@ -1,5 +1,5 @@
-------Begin Mplus Model Run: 19Oct2018 20:44:25------
-Target directory: .
+------Begin Mplus Model Run: 29Jan2019 16:49:07------
+Target directory: /Users/jrosenb8/Dropbox/1_Research/modeling-data-modeling
 Run options:
 	Recursive (run models in subdirectories): FALSE
 	Show output on console: FALSE
@@ -7,4 +7,4 @@ Run options:
 ------
 Currently running model: i.inp
 
-------End Mplus Model Run: 19Oct2018 20:44:26------
+------End Mplus Model Run: 29Jan2019 16:49:07------

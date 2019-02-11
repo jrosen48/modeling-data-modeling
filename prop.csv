@@ -1,0 +1,22 @@
+class,condition,groups,n,prop
+Inventing & Discussing,0,seat,3,0.001
+Inventing & Discussing,1,seat,35,0.009
+Inventing & Discussing,0,small_groups,8,0.002
+Inventing & Discussing,1,small_groups,380,0.101
+Inventing & Discussing,1,whole,491,0.131
+Discussing Ideas,0,seat,25,0.007
+Discussing Ideas,1,seat,45,0.012
+Discussing Ideas,0,small_groups,38,0.01
+Discussing Ideas,1,small_groups,517,0.138
+Discussing Ideas,0,whole,72,0.019
+Discussing Ideas,1,whole,590,0.157
+Low Activity,0,seat,118,0.031
+Low Activity,1,seat,72,0.019
+Low Activity,0,small_groups,87,0.023
+Low Activity,1,small_groups,411,0.11
+Low Activity,0,whole,153,0.041
+Low Activity,1,whole,268,0.071
+Low Activity,1,NA,3,0.001
+Inventing & Connecting,1,seat,5,0.001
+Inventing & Connecting,1,small_groups,104,0.028
+Inventing & Connecting,1,whole,328,0.087

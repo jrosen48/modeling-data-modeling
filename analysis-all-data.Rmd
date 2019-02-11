@@ -1,5 +1,5 @@
 ---
-title: "LCA data modeling Seth-Josh"
+title: "2019-01-27 - LCA data modeling Seth-Josh"
 output: pdf_document
 ---
 
@@ -10,6 +10,90 @@ knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60),  # For code
 
 options(cli.width = 60)  # For tidyverse loading messages
 set.seed(20180925)
+knitr::clean_cache()
+```
+
+# Getting data from Google Sheets
+
+```{r, eval = TRUE}
+library(googlesheets)
+library(readr)
+
+g <- gs_title("Observations_segment_Units_1-7_2013-14-with-duplicates-identified")
+d <- gs_read(g, col_types = 
+                 readr::cols(
+  `ClassObservation::Observer` = col_character(),
+  `ClassObservation::ObsNickname` = col_double(),
+  `Teacher::TeacherID` = col_double(),
+  `Teacher::First Name` = col_character(),
+  `Teacher::Last Name` = col_character(),
+  `Teacher::Condition` = col_character(),
+  `ClassObservation::Unit` = col_double(),
+  `ClassObservation::Date` = col_datetime(format = ""),
+  Notes = col_character(),
+  ObsNN = col_double(),
+  SegNum = col_double(),
+  `Segment::StartStamp` = col_datetime(format = ""),
+  `Segment::EndStamp` = col_datetime(format = ""),
+  fWhole = col_double(),
+  fGroups = col_double(),
+  fSeat = col_double(),
+  sInvented = col_double(),
+  sConceptual = col_double(),
+  sProcedural = col_double(),
+  sEngagement = col_character(),
+  tInitSelect = col_double(),
+  tCompare = col_double(),
+  tDiscussQ = col_double(),
+  tPressExplain = col_double(),
+  tConnectOthers = col_double(),
+  tConnectBigIdeas = col_double(),
+  tConventional = col_double(),
+  tProcedural = col_double(),
+  iPrecision = col_double(),
+  iCenter = col_double(),
+  iDIsplay = col_double(),
+  iOther = col_double(),
+  iOrder = col_double(),
+  iScale = col_double(),
+  iGrouping = col_double(),
+  iShape = col_double(),
+  iShow = col_double(),
+  iHide = col_double(),
+  iMode = col_double(),
+  iMedian = col_double(),
+  iMean = col_double(),
+  iRange = col_double(),
+  iCenterClump = col_double(),
+  iDeviation = col_double(),
+  iReplicability = col_double(),
+  iGeneralizability = col_double(),
+  iLinkVisDist = col_double(),
+  iLinkImagDist = col_double(),
+  ITheoreticalProb = col_double(),
+  IEmpiricalProb = col_double(),
+  IOdds = col_logical(),
+  ISampleSize = col_double(),
+  ISamplingDistrib = col_double(),
+  ICenterStats = col_double(),
+  IVariabilityStats = col_double(),
+  `Segment::iIntelligibility` = col_double(),
+  `Segment::iModelFit` = col_double(),
+  `Segment::iDistribution` = col_double(),
+  `Segment::iRandomComponents` = col_double(),
+  `Segment::iNonRandomComponents` = col_double(),
+  `Segment::iMedianDistr` = col_double(),
+  `Segment::iIQRDistr` = col_logical(),
+  `Segment::iNewMedian` = col_double(),
+  `Segment::iNewIQR` = col_logical(),
+  `Segment::iRegions` = col_double(),
+  `Segment::iQuantRegions` = col_double(),
+  number_of_segments = col_double(),
+  `Duplicate Condition` = col_character()
+))
+
+g1 <- gs_title("Observations_segment_Units_1-7_2012-13-with-duplicates-identified")
+d1 <- gs_read(g1)
 ```
 
 # 1. Loading, setting up
@@ -17,37 +101,78 @@ set.seed(20180925)
 ```{r, load}
 library(tidyverse)
 library(poLCA)
+library(readxl)
+```
 
-f <- "obs-segment_units1-7_2013-2014.csv"
-d <- read_csv(f)
+```{r, eval = FALSE}
+#d <- read_excel("Observations_segment_Units_1-7_2013-14_updated01192015.xlsx")
+c <- count(d, `Teacher::TeacherID`, `ClassObservation::Date`, `ClassObservation::Unit`, SegNum)
+d <- rename(d, teacher_full_name = `Teacher::TeacherID`)
+d %>% left_join(c) %>% rename(number_of_segments = n) %>%  write_csv("Observations_segment_Units_1-7_2013-14-with-duplicates-identified-fin.csv")
 
-f1 <- "Observations_segment_Units_1-7_2012-13.csv"
-d1 <-read_csv(f1)
+# f1 <- "Observations_segment_Units_1-7_2012-13.csv"
+# d1 <-read_csv(f1)
+d1 <- unite(d1, teacher_full_name, `Teacher::First Name`, `Teacher::Last Name`)
+c <- count(d1, teacher_full_name, `ClassObservation::Date`, `ClassObservation::Unit`, SegNum)
+d1 %>% left_join(c) %>% rename(number_of_segments = n) %>%  write_csv("Observations_segment_Units_1-7_2012-13-with-duplicates-identified-fin.csv")
+```
+
+```{r, eval = FALSE}
+d <- read_csv("Observations_segment_Units_1-7_2013-14-with-duplicates-identified-fin.csv")
+d1 <- read_csv("Observations_segment_Units_1-7_2012-13-with-duplicates-identified-fin.csv")
 ```
 
 # 2. Preparing data with a few teacher and student variables
 
-None of the unit-specific variables included.
+Checking for dups
 
+```{r, eval = FALSE}
+d %>% 
+    filter(number_of_segments > 1) %>%
+    group_by(`Teacher::TeacherID`, `ClassObservation::Date`, SegNum) %>%
+    mutate(dup = ifelse(`Duplicate Condition` %in% c("D", "d"), 1, 0)) %>%
+    summarize(unidentified = sum(dup)) %>%
+    filter(unidentified < 1)
+
+# d1 %>% count(`Teacher::TeacherID`, `ClassObservation::Date`, SegNum) %>% count(n)
+
+d %>% count(`Duplicate Condition`)
+d1 %>% count(`Duplicate Condition`)
+d %>% count(`number_of_segments`)
+
+d %>% mutate(unidentified = ifelse(is.na(`Duplicate Condition`) & number_of_segments > 1, 1, 0)) %>% count(unidentified)
+```
+
+For `d`, we should remove 508 segments - but we remove 480 (should we identify 26 more?)
+For `d1`, we should remove 96.
+
+For a total of 602 to remove.
 
 ```{r}
-
 add_one <- function(x) {
     x + 1
 }
 
 ds <- d %>% 
-    dplyr::select(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain, fGroups) %>% 
+    dplyr::select(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain, fGroups, `Duplicate Condition`) %>% 
     map_df(replace_na, 0) %>% 
-    map_df(add_one)
+    modify_if(is.numeric, add_one)
 
 ds1 <- d1 %>% 
-    dplyr::select(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain, fGroups) %>% 
+    dplyr::select(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain, fGroups, `Duplicate Condition`) %>% 
     map_df(replace_na, 0) %>% 
-    map_df(add_one)
+    modify_if(is.numeric, add_one)
 
 dd <- bind_rows(ds, ds1)
 ```
+
+```{r}
+dds <- filter(dd, `Duplicate Condition` != "D" & `Duplicate Condition` != "d")
+
+nrow(dd) - nrow(dds)
+```
+
+Need to remove 26 more.
 
 # 3. Choosing the number of classes/profiles
 
@@ -60,7 +185,7 @@ od <- map(1:9, poLCA, formula = f, data = dd, maxiter = 5000, verbose = FALSE, g
     map_df(broom::glance)
 ```
 
-```{r, plot}
+```{r, plot, eval = FALSE}
 od %>% 
     mutate(n_classes = 1:9) %>% 
     gather(key, val, BIC, AIC) %>% 
@@ -72,15 +197,15 @@ od %>%
     labs(caption = "Lower values of the AIC & BIC suggest preferred model(s); generally, BIC is more conservative than AIC")
 ```
 
-Based on this fit statistic--the Bayesian Information Criteria, which is just a transformation of the log-likelihood, and is usually recommended along with the AIC as one criterion for model selection--it looks like 3 and especially 4 or 5 class solutions seem reasonable.
+Based on this fit statistic--the Bayesian Information Criteria, which is just a transformation of the log-likelihood, and is usually recommended along with the AIC as one criterion for model selection--it looks like 3 or 5 class solutions are preferred.
 
 # 4. Examining 2, 3, 4, and 5 class solutions
 
-```{r, spec-sols}
+```{r, spec-sols, cache = TRUE}
 f <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain) ~ 1
 
-m2 <- poLCA(f, ds, nclass = 2, maxiter = 5000, graphs = TRUE)
-m3 <- poLCA(f, ds, nclass = 3, maxiter = 5000, graphs = TRUE)
-m4 <- poLCA(f, ds, nclass = 4, maxiter = 5000, graphs = TRUE)
-m5 <- poLCA(f, ds, nclass = 5, maxiter = 5000, graphs = TRUE)
+m2 <- poLCA(f, dd, nclass = 2, maxiter = 5000, graphs = TRUE)
+m3 <- poLCA(f, dd, nclass = 3, maxiter = 5000, graphs = TRUE)
+m4 <- poLCA(f, dd, nclass = 4, maxiter = 10000, graphs = TRUE)
+m5 <- poLCA(f, dd, nclass = 5, maxiter = 10000, graphs = TRUE)
 ```
