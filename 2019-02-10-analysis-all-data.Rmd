@@ -154,7 +154,7 @@ dds <- filter(dd, `Duplicate Condition` != "D" & `Duplicate Condition` != "d")
 
 Using latent class analysis through the **poLCA** R package.
 
-```{r, mapping-fit-stats, results = 'hide', eval = TRUE}
+```{r, mapping-fit-stats, results = 'hide', eval = FALSE}
 set.seed(20180925)
 
 f <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ, tConnectBigIdeas, tConnectOthers, tPressExplain) ~ 1
@@ -163,7 +163,7 @@ od <- map(1:9, poLCA, formula = f, data = dds, maxiter = 5000, verbose = FALSE, 
     map_df(broom::glance)
 ```
 
-```{r, plot, eval = TRUE}
+```{r, plot, eval = FALSE}
 od %>% 
     mutate(n_classes = 1:9) %>% 
     gather(key, val, BIC, AIC) %>% 
@@ -190,7 +190,49 @@ f <- cbind(sInvented, sProcedural, sConceptual, tInitSelect, tCompare, tDiscussQ
 #m2 <- poLCA(f, dds, nclass = 2, maxiter = 10000, graphs = TRUE)
 #m3 <- poLCA(f, dds, nclass = 3, maxiter = 10000, graphs = TRUE)
 m4 <- poLCA(f, dds, nclass = 4, maxiter = 10000, graphs = TRUE)
-#m5 <- poLCA(f, dds, nclass = 5, maxiter = 10000, graphs = TRUE)
+plot(m4)
+ggsave("m4-all.png", width = 10, height = 8)
+```
+
+```{r, plots}
+b <- broom::tidy(m4)
+b$class <- factor(b$class)
+levels(b$class) <- c("Low Activity", "Inventing & Connecting", "Inventing & Discussing","Discussing Ideas")
+b$class <- forcats::fct_relevel(b$class, c("Low Activity", "Discussing Ideas", "Inventing & Discussing", "Inventing & Connecting"))
+
+# b$class <- forcats::fct_recode(b$class, 
+#                                `Low Activity` = 1
+#                                `Inventing & Connecting` = 2,
+#                                `Inventing & Discussing` = 3,
+#                                `Discussing Ideas` = 4)
+
+b %>% 
+    filter(outcome == 2) %>% 
+    ggplot(aes(x = class, y = estimate, fill = variable)) +
+    geom_col(position = 'dodge') +
+    scale_fill_viridis_d("") +
+    theme_bw() +
+    ylab("Probability") +
+    xlab(NULL) +
+    theme(text = element_text(size = 15))
+
+
+broom::tidy(m4) %>% 
+    filter(outcome == 1) %>% 
+    mutate(class_name = rep(c("Low Activity", "Inventing & Connecting", "Inventing & Discussing","Discussing Ideas"), 9)) %>% 
+    ggplot(aes(x = variable, y = estimate, fill = variable)) +
+    geom_col() +
+    facet_wrap(~class_name) +
+    scale_fill_viridis_d() +
+    theme_bw() +
+    ylab("Probability") +
+    theme(legend.position = "none") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    xlab(NULL)
+
+broom::tidy(m4)
+plot(m4)
+
 ```
 
 ```{r, eval = FALSE}
@@ -245,7 +287,7 @@ f <- function(teacher_ID, condition, d) {
 }
 ```
 
-```{r}
+```{r, eval = FALSE}
 t <- df %>% 
     arrange(teacher, unit, seg_num) %>% 
     group_by(unit) %>% 
@@ -298,5 +340,25 @@ mat2 <- as.matrix(dm2[, -c(1, 5)])
 cs2 <- chisq.test(mat2)
 write_csv(dm2, "tab2.csv")
 write_csv(as.data.frame(cs2$stdres), "mat2.csv")
+# clipr::write_clip(cs2$stdres)
+
+dm3 <- df %>%
+    mutate(seg_group = case_when(
+        seg_num %in% c(1, 2) ~ 1,
+        seg_num %in% c(3, 4) ~ 2,
+        seg_num %in% c(5, 6) ~ 3,
+        seg_num %in% c(7, 8) ~ 4,
+        seg_num > 8 ~ 5,
+    )) %>% 
+    count(class, seg_group) %>% 
+    spread(seg_group, n)
+names_dm3 <- dm3$class
+mat3 <- as.matrix(dm3[, -1])
+cs3 <- chisq.test(mat3)
+write_csv(dm3, "tab3.csv")
+write_csv(as.data.frame(cs3$stdres), "mat3.csv")
+
+dm3
+
 # clipr::write_clip(cs2$stdres)
 ```
